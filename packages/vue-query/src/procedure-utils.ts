@@ -1,7 +1,8 @@
 import type { Client, ClientContext } from '@orpc/client'
 import type { MaybeOptionalOptions } from '@orpc/shared'
-import type { InfiniteData } from '@tanstack/vue-query'
+import type { InfiniteData, QueryFunction } from '@tanstack/vue-query'
 import type { InfiniteOptionsBase, InfiniteOptionsIn, MutationOptions, MutationOptionsIn, QueryOptionsBase, QueryOptionsIn } from './types'
+import { skipToken } from '@tanstack/vue-query'
 import { computed } from 'vue'
 import { buildKey } from './key'
 import { unrefDeep } from './utils'
@@ -58,7 +59,13 @@ export function createProcedureUtils<TClientContext extends ClientContext, TInpu
     queryOptions(...[optionsIn = {} as any]) {
       return {
         queryKey: computed(() => buildKey(options.path, { type: 'query', input: unrefDeep(optionsIn.input) })),
-        queryFn: ({ signal }) => client(unrefDeep(optionsIn.input), { signal, context: unrefDeep(optionsIn.context) }),
+        queryFn: computed(() => {
+          const input = unrefDeep(optionsIn.input)
+          if (input === skipToken)
+            return skipToken
+
+          return (({ signal }) => client(input, { signal, context: unrefDeep(optionsIn.context) })) satisfies QueryFunction
+        }),
         ...optionsIn,
       }
     },

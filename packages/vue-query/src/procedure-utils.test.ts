@@ -1,3 +1,4 @@
+import { skipToken } from '@tanstack/vue-query'
 import { computed, ref } from 'vue'
 import * as Key from './key'
 import { createProcedureUtils } from './procedure-utils'
@@ -25,9 +26,12 @@ describe('createProcedureUtils', () => {
     expect(buildKeySpy).toHaveBeenCalledTimes(1)
     expect(buildKeySpy).toHaveBeenCalledWith(['ping'], { type: 'query', input: { search: '__search__' } })
 
-    await expect(options.queryFn!({ signal } as any)).resolves.toEqual('__output__')
+    await expect(options.queryFn.value!({ signal } as any)).resolves.toEqual('__output__')
     expect(client).toHaveBeenCalledTimes(1)
     expect(client).toBeCalledWith({ search: '__search__' }, { signal, context: { batch: '__batch__' } })
+
+    const optionsWithSkipToken = utils.queryOptions({ input: computed(() => skipToken), context: { batch: '__batch__' } })
+    expect(optionsWithSkipToken.queryFn.value).toBe(skipToken)
   })
 
   it('.infiniteOptions', async () => {
