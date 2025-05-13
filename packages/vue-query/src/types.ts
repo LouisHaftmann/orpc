@@ -16,7 +16,7 @@ export type MaybeRefDeep<T> = MaybeRef<
 >
 
 export type QueryOptionsIn<TClientContext extends ClientContext, TInput, TOutput, TError, TSelectData> =
-  & (undefined extends TInput ? { input?: MaybeRefDeep<TInput | SkipToken> } : { input: MaybeRefDeep<TInput | SkipToken> })
+  & (undefined extends TInput ? { input?: MaybeRefDeep<TInput> } : { input: MaybeRefDeep<TInput> })
   & (Record<never, never> extends TClientContext ? { context?: MaybeRefDeep<TClientContext> } : { context: MaybeRefDeep<TClientContext> })
   & {
     [P in keyof Omit<QueryObserverOptions<TOutput, TError, TSelectData, TOutput>, 'queryKey' | 'enabled'>]:
@@ -30,7 +30,26 @@ export type QueryOptionsIn<TClientContext extends ClientContext, TInput, TOutput
 
 export interface QueryOptionsBase<TOutput, TError> {
   queryKey: ComputedRef<QueryKey>
-  queryFn: ComputedRef<(ctx: QueryFunctionContext) => Promise<TOutput>>
+  queryFn: (ctx: QueryFunctionContext) => Promise<TOutput>
+  retry?(failureCount: number, error: TError): boolean // this help tanstack can infer TError
+}
+
+export type SkippableQueryOptionsIn<TClientContext extends ClientContext, TInput, TOutput, TError, TSelectData> =
+  & (undefined extends TInput ? { input?: MaybeRefDeep<TInput | SkipToken> } : { input: MaybeRefDeep<TInput | SkipToken> })
+  & (Record<never, never> extends TClientContext ? { context?: MaybeRefDeep<TClientContext> } : { context: MaybeRefDeep<TClientContext> })
+  & {
+    [P in keyof Omit<QueryObserverOptions<TOutput, TError, TSelectData, TOutput>, 'queryKey' | 'enabled'>]:
+    MaybeRefDeep<QueryObserverOptions<TOutput, TError, TSelectData, TOutput>[P]>
+  }
+  & {
+    enabled?: MaybeRefOrGetter<QueryObserverOptions<TOutput, TError, TSelectData, TOutput>['enabled']>
+    queryKey?: MaybeRefDeep<QueryObserverOptions<TOutput, TError, TSelectData, TOutput>['queryKey']>
+    shallow?: boolean
+  }
+
+export interface SkippableQueryOptionsBase<TOutput, TError> {
+  queryKey: ComputedRef<QueryKey>
+  queryFn: ComputedRef<((ctx: QueryFunctionContext) => Promise<TOutput>) | SkipToken>
   retry?(failureCount: number, error: TError): boolean // this help tanstack can infer TError
 }
 

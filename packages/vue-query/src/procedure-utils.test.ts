@@ -1,3 +1,4 @@
+import type { SkipToken } from '@tanstack/vue-query'
 import { skipToken } from '@tanstack/vue-query'
 import { computed, ref } from 'vue'
 import * as Key from './key'
@@ -26,11 +27,24 @@ describe('createProcedureUtils', () => {
     expect(buildKeySpy).toHaveBeenCalledTimes(1)
     expect(buildKeySpy).toHaveBeenCalledWith(['ping'], { type: 'query', input: { search: '__search__' } })
 
-    await expect(options.queryFn.value!({ signal } as any)).resolves.toEqual('__output__')
+    await expect(options.queryFn!({ signal } as any)).resolves.toEqual('__output__')
+    expect(client).toHaveBeenCalledTimes(1)
+    expect(client).toBeCalledWith({ search: '__search__' }, { signal, context: { batch: '__batch__' } })
+  })
+
+  it('.skippableQueryOptions', async () => {
+    const options = utils.skippableQueryOptions({ input: computed(() => ({ search: ref('__search__') })), context: { batch: '__batch__' } })
+
+    expect(options.queryKey.value).toBe(buildKeySpy.mock.results[0]!.value)
+    expect(buildKeySpy).toHaveBeenCalledTimes(1)
+    expect(buildKeySpy).toHaveBeenCalledWith(['ping'], { type: 'query', input: { search: '__search__' } })
+
+    expect(options.queryFn).not.toBe(skipToken)
+    await expect((options.queryFn.value as Exclude<typeof options.queryFn.value, SkipToken>)({ signal } as any)).resolves.toEqual('__output__')
     expect(client).toHaveBeenCalledTimes(1)
     expect(client).toBeCalledWith({ search: '__search__' }, { signal, context: { batch: '__batch__' } })
 
-    const optionsWithSkipToken = utils.queryOptions({ input: computed(() => skipToken), context: { batch: '__batch__' } })
+    const optionsWithSkipToken = utils.skippableQueryOptions({ input: computed(() => skipToken), context: { batch: '__batch__' } })
     expect(optionsWithSkipToken.queryFn.value).toBe(skipToken)
   })
 

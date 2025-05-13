@@ -1,7 +1,7 @@
 import type { Client, ClientContext } from '@orpc/client'
 import type { MaybeOptionalOptions } from '@orpc/shared'
 import type { InfiniteData, QueryFunction } from '@tanstack/vue-query'
-import type { InfiniteOptionsBase, InfiniteOptionsIn, MutationOptions, MutationOptionsIn, QueryOptionsBase, QueryOptionsIn } from './types'
+import type { InfiniteOptionsBase, InfiniteOptionsIn, MutationOptions, MutationOptionsIn, QueryOptionsBase, QueryOptionsIn, SkippableQueryOptionsBase, SkippableQueryOptionsIn } from './types'
 import { skipToken } from '@tanstack/vue-query'
 import { computed } from 'vue'
 import { buildKey } from './key'
@@ -25,6 +25,17 @@ export interface ProcedureUtils<TClientContext extends ClientContext, TInput, TO
       U & QueryOptionsIn<TClientContext, TInput, TOutput, TError, USelectData>
     >
   ): NoInfer<U & Omit<QueryOptionsBase<TOutput, TError>, keyof U>>
+
+  /**
+   * Generate options used for useQuery/prefetchQuery/... with support for passing `skipToken` as input
+   *
+   * @see {@link https://orpc.unnoq.com/docs/tanstack-query/basic#query-options-utility Tanstack Query Options Utility Docs}
+   */
+  skippableQueryOptions<U, USelectData = TOutput>(
+    ...rest: MaybeOptionalOptions<
+      U & SkippableQueryOptionsIn<TClientContext, TInput, TOutput, TError, USelectData>
+    >
+  ): NoInfer<U & Omit<SkippableQueryOptionsBase<TOutput, TError>, keyof U>>
 
   /**
    * Generate options used for useInfiniteQuery/prefetchInfiniteQuery/...
@@ -57,6 +68,14 @@ export function createProcedureUtils<TClientContext extends ClientContext, TInpu
     call: client,
 
     queryOptions(...[optionsIn = {} as any]) {
+      return {
+        queryKey: computed(() => buildKey(options.path, { type: 'query', input: unrefDeep(optionsIn.input) })),
+        queryFn: ({ signal }) => client(unrefDeep(optionsIn.input), { signal, context: unrefDeep(optionsIn.context) }),
+        ...optionsIn,
+      }
+    },
+
+    skippableQueryOptions(...[optionsIn = {} as any]) {
       return {
         queryKey: computed(() => buildKey(options.path, { type: 'query', input: unrefDeep(optionsIn.input) })),
         queryFn: computed(() => {
